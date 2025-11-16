@@ -1,0 +1,109 @@
+name: sap-reporting
+services:
+    sap_backend:
+        cpu_shares: 90
+        command:
+            - bash
+            - -c
+            - |-
+              pip install -r requirements.txt &&
+                       uvicorn main:app --host 0.0.0.0 --port 8000
+        container_name: sap_backend
+        depends_on:
+            sap_db:
+                condition: service_started
+                required: true
+        deploy:
+            resources:
+                limits:
+                    memory: "8179941376"
+        environment:
+            DATABASE_URL: mysql+pymysql://sapuser:sap_password@sap_db:3306/sap_reporting
+        hostname: sap_backend
+        image: python:3.11-slim
+        labels:
+            icon: http://192.168.0.133/DATA/Media/Icons/import.png
+        networks:
+            default: null
+        ports:
+            - mode: ingress
+              target: 8000
+              published: "8001"
+              protocol: tcp
+        restart: always
+        volumes:
+            - type: bind
+              source: /mnt/Storage1/Containers/sap-reporting/backend
+              target: /app
+              bind:
+                create_host_path: true
+        working_dir: /app
+    sap_db:
+        cpu_shares: 90
+        command: []
+        container_name: sap_db
+        deploy:
+            resources:
+                limits:
+                    memory: "8179941376"
+        environment:
+            MYSQL_DATABASE: sap_reporting
+            MYSQL_PASSWORD: sap_password
+            MYSQL_ROOT_PASSWORD: root_password
+            MYSQL_USER: sapuser
+        hostname: sap_db
+        image: mariadb:10.6
+        labels:
+            icon: http://192.168.0.133/DATA/Media/Icons/import.png
+        networks:
+            default: null
+        ports:
+            - mode: ingress
+              target: 3306
+              published: "3307"
+              protocol: tcp
+        restart: always
+        volumes:
+            - type: bind
+              source: /mnt/Storage1/Containers/Databases/sap_db
+              target: /var/lib/mysql
+              bind:
+                create_host_path: true
+    sap_metabase:
+        cpu_shares: 90
+        command: []
+        container_name: sap_metabase
+        depends_on:
+            sap_db:
+                condition: service_started
+                required: true
+        deploy:
+            resources:
+                limits:
+                    memory: "8179941376"
+        hostname: sap_metabase
+        image: metabase/metabase:latest
+        labels:
+            icon: http://192.168.0.133/DATA/Media/Icons/import.png
+        networks:
+            default: null
+        ports:
+            - mode: ingress
+              target: 3000
+              published: "3001"
+              protocol: tcp
+        restart: always
+networks:
+    default:
+        name: sap-reporting_default
+x-casaos:
+    author: self
+    category: self
+    hostname: 192.168.0.133
+    icon: http://192.168.0.133/DATA/Media/Icons/import.png
+    index: /docs
+    is_uncontrolled: false
+    port_map: "8001"
+    scheme: http
+    title:
+        custom: Metabase Data Upload
