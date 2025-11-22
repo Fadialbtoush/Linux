@@ -303,20 +303,24 @@ def build_material_master(
     )
 
     # ---------------- Serialized flag logic ----------------
-    # Not serialized if Serial Number Profile is blank, NULL, or 'Z002'
-    snp = (
-        merged.get("serial_number_profile")
-        .astype("string")
-        .str.strip()
-        .str.upper()
-    )
+   # --- Serialization flags ----------------------------------------
 
-    merged["is_serialized"] = (
-        snp.notna()
-        & (snp != "")
-        & (snp != "Z002")
-    )
+# Normalize the serial number profile column from ZMM345E
+df["serial_number_profile"] = (
+    df.get("serial_number_profile", pd.NA)
+      .astype("string")
+      .str.strip()
+)
 
+# Treat as NOT serialized when:
+# - blank ("")
+# - NULL
+# - equal to "Z002" (any case, with/without spaces)
+upper_profile = df["serial_number_profile"].fillna("").str.strip().str.upper()
+
+df["is_serialized"] = ~(
+    (upper_profile == "") | (upper_profile == "Z002")
+)
     # ---------------- Final dim table shape ----------------
     dim = merged[
         [
