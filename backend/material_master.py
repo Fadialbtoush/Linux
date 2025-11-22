@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from pathlib import Path
 from datetime import date
-from typing import Optional
 
 import pandas as pd
 from sqlalchemy import text
@@ -39,6 +38,8 @@ def _normalize_str(series: pd.Series) -> pd.Series:
 # ------------------------------------------------------
 # Main builder
 # ------------------------------------------------------
+
+
 def build_material_master(
     zmm345e_path: Path,
     storage_location_path: Path,
@@ -76,7 +77,7 @@ def build_material_master(
         "Price contl",
         "Old part No.",
         "Vendor",
-        "MTyp",
+        # "MTyp"  # <- removed, this is in Material Type file, not ZMM345E
     ]
     _ensure_columns(zmm, required_zmm_cols, "ZMM345E")
 
@@ -141,7 +142,7 @@ def build_material_master(
             "ProductGroup": "product_group",
             "ProductSeries": "product_series",
             "Vendor": "vendor_code",
-            "MTyp": "material_type_code",
+            "MTyp": "material_type_code",  # if present in this extract, also map
         }
     )
 
@@ -304,13 +305,13 @@ def build_material_master(
     # ---------------- Serialized flag logic ----------------
     merged["serial_number_profile"] = (
         merged.get("serial_number_profile", pd.NA)
-              .astype("string")
-              .str.strip()
+        .astype("string")
+        .str.strip()
     )
 
     upper_profile = merged["serial_number_profile"].fillna("").str.strip().str.upper()
 
-    # Not serialized → blank / NULL / Z002
+    # Not serialized -> blank / NULL / Z002
     merged["is_serialized"] = ~(
         (upper_profile == "") | (upper_profile == "Z002")
     )
@@ -359,12 +360,7 @@ def build_material_master(
         index=False,
     )
 
-    _ensure_material_master_indexes()
-
-
-    
-    
-    # ---------------- Indexes (created once) ----------------
+    # Indexes
     _ensure_material_master_indexes()
 
 
