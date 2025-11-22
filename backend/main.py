@@ -1,5 +1,6 @@
 #Fadi
 import uuid
+
 from pathlib import Path
 from typing import Optional
 
@@ -15,8 +16,7 @@ from odoo_aging import process_odoo_aging
 from zsdr030a import process_zsdr030a
 from zsdr004 import process_zsdr004
 from ZMM345E import _process_zmm345e
-from material_master import build_material_master  # <-- important
-
+from material_master import build_material_master, get_material_master_stats
 
 app = FastAPI(title="SAP Reporting Backend")
 
@@ -283,3 +283,7 @@ async def upload_material_master(
         "batch_id": unified_batch_id,
         "snapshot_date": snapshot_date_obj.isoformat(),
     }
+    @app.get("/material_master/diagnostics")
+def material_master_diagnostics():
+    ensure_core_tables()
+    return get_material_master_stats()
