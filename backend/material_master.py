@@ -39,8 +39,6 @@ def _normalize_str(series: pd.Series) -> pd.Series:
 # ------------------------------------------------------
 # Main builder
 # ------------------------------------------------------
-
-
 def build_material_master(
     zmm345e_path: Path,
     storage_location_path: Path,
@@ -143,6 +141,7 @@ def build_material_master(
             "ProductGroup": "product_group",
             "ProductSeries": "product_series",
             "Vendor": "vendor_code",
+            "MTyp": "material_type_code",
         }
     )
 
@@ -303,24 +302,19 @@ def build_material_master(
     )
 
     # ---------------- Serialized flag logic ----------------
-   # --- Serialization flags ----------------------------------------
+    merged["serial_number_profile"] = (
+        merged.get("serial_number_profile", pd.NA)
+              .astype("string")
+              .str.strip()
+    )
 
-# Normalize the serial number profile column from ZMM345E
-df["serial_number_profile"] = (
-    df.get("serial_number_profile", pd.NA)
-      .astype("string")
-      .str.strip()
-)
+    upper_profile = merged["serial_number_profile"].fillna("").str.strip().str.upper()
 
-# Treat as NOT serialized when:
-# - blank ("")
-# - NULL
-# - equal to "Z002" (any case, with/without spaces)
-upper_profile = df["serial_number_profile"].fillna("").str.strip().str.upper()
+    # Not serialized → blank / NULL / Z002
+    merged["is_serialized"] = ~(
+        (upper_profile == "") | (upper_profile == "Z002")
+    )
 
-df["is_serialized"] = ~(
-    (upper_profile == "") | (upper_profile == "Z002")
-)
     # ---------------- Final dim table shape ----------------
     dim = merged[
         [
@@ -356,10 +350,8 @@ df["is_serialized"] = ~(
     dim["snapshot_date"] = snapshot_date
     dim["source"] = "MATERIAL_MASTER"
 
-    # Ensure booleans
     dim["is_serialized"] = dim["is_serialized"].astype(bool)
 
-    # Write to DB
     dim.to_sql(
         "dim_material_master",
         engine,
@@ -367,6 +359,11 @@ df["is_serialized"] = ~(
         index=False,
     )
 
+    _ensure_material_master_indexes()
+
+
+    
+    
     # ---------------- Indexes (created once) ----------------
     _ensure_material_master_indexes()
 
